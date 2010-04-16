@@ -1,0 +1,73 @@
+= Documatic
+
+Documatic is an OpenDocument extension for Ruby Reports (Ruport). It
+is a template-driven formatter that can be used to produce attractive
+printable documents such as database reports, invoices, letters, faxes
+and more.
+
+As of version 0.1.0, Documatic supports OpenDocument text and
+spreadsheet formats.
+
+== Installation
+
+Documatic can be installed via Rubygems.
+
+  % gem install documatic
+
+
+== Usage
+
+You can load Documatic as a gem when your program is initialised:
+
+  require 'rubygems'
+  require 'documatic'
+
+Documatic will then be available as a formatter for your Ruport
+tables, groups and groupings.  Rendering using an OpenDocument text
+template is done like this:
+
+  data.to_odt_template(:template_file => 'path/filename.odt',
+                       :output_file   => 'output-path/filename.odt')
+
+Rendering using an OpenDocument spreadsheet is done like this:
+
+  data.to_ods_template(:template_file => 'path/filename.ods',
+                       :output_file   => 'output-path/filename.ods')
+
+Documatic creates the output path if required.
+
+The wiki (see below) has more documentation and examples, plus simple
+tutorials to illustrate how text and spreadsheet rendering works.
+
+
+== Version
+
+0.2.0, released 26-APR-2008.
+
+
+== Licence
+
+Documatic is (p) Public Domain 2007, no rights reserved.
+
+Documatic comes with no warranty whatsoever.
+
+
+== Support
+
+See the Documatic Trac page at
+http://stonecode.svnrepository.com/documatic/trac.cgi.  The wiki is
+the main source of information for end-users.  The tracking system is
+where bug reports should be filed.
+
+Users can discuss Documatic on the Ruby Reports mailing list at
+http://groups.google.com/group/ruby-reports.
+
+The Subversion repository for Documatic is at
+http://stonecode.svnrepository.com/svn/documatic.
+
+The Rubyforge project page for Documatic is at
+http://rubyforge.org/projects/documatic.  The Documatic rubygem is
+distributed from there.
+
+For any other enquiries please contact Dave Nelson (urbanus at 240gl
+dot org).
