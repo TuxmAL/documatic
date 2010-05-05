@@ -8,7 +8,7 @@
 
 require 'rubygems'
 require 'documatic'
-
+gem 'documatic', '>= 0.2.1'
 # Let's make a trivial table. And include numeric data that should be summarized in the output_file using a FORMULA. 
 
 data = Ruport::Data::Table.new( :column_names => %w(Name Phone Num),
