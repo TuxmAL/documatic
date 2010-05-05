@@ -25,7 +25,7 @@ data = Ruport::Data::Table.new( :column_names => %w(Name Phone),
 # (Note: the output directory will be created if it does not exist
 # yet.  If the output file already exists it will be overwritten.)
 
-data.to_odt_template(:template_file => 'tutorial.odt',
+data.to_odt_template(:template_file => 'template.odt',
                      :output_file   => 'output/tutorial.odt')
 
 # Now you will want to look at both the original template and the
