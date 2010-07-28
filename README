@@ -36,13 +36,7 @@ Rendering using an OpenDocument spreadsheet is done like this:
 
 Documatic creates the output path if required.
 
-The wiki (see below) has more documentation and examples, plus simple
-tutorials to illustrate how text and spreadsheet rendering works.
 
-
-== Version
-
-0.2.0, released 26-APR-2008.
 
 
 == Licence
@@ -54,20 +48,9 @@ Documatic comes with no warranty whatsoever.
 
 == Support
 
-See the Documatic Trac page at
-http://stonecode.svnrepository.com/documatic/trac.cgi.  The wiki is
-the main source of information for end-users.  The tracking system is
-where bug reports should be filed.
-
-Users can discuss Documatic on the Ruby Reports mailing list at
+Zachris note may 2010
+Documatic seems to be unmaintained. Please read the sourcecode or discuss on 
 http://groups.google.com/group/ruby-reports.
 
-The Subversion repository for Documatic is at
-http://stonecode.svnrepository.com/svn/documatic.
 
-The Rubyforge project page for Documatic is at
-http://rubyforge.org/projects/documatic.  The Documatic rubygem is
-distributed from there.
 
-For any other enquiries please contact Dave Nelson (urbanus at 240gl
-dot org).

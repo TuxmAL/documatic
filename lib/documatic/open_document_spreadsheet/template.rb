@@ -77,6 +77,10 @@ module Documatic::OpenDocumentSpreadsheet
     end
 
     def close
+      # To get rid of an annoying message about corrupted files in OOCalc 3.2.0
+      # we most remove the compiled content before we close our ODS file.
+      self.jar.remove('documatic/master/content.erb')
+      # Now we can safely close our document.
       self.jar.close
     end
     
@@ -104,6 +108,7 @@ module Documatic::OpenDocumentSpreadsheet
       code = code.gsub(/<text:tab\/>/, "\t")
       return REXML::Text.unnormalize(code)
     end
+
 
     # Massage OpenDocument XML into ERb.  (This is the heart of the compiler.)
     def erbify(code)
@@ -146,32 +151,36 @@ module Documatic::OpenDocumentSpreadsheet
           
           result += md.pre_match
           
-          match_code = false
-          match_row  = false
+          #match_code = false
+          #match_row  = false
 
-          if styles[md[TYPE]] == 'Code'
-            match_code = true
-            delim_start = '<% ' ; delim_end = ' %>'
-            if md[ROW_START] and md[ROW_END]
-              match_row = true
-            end
-          else  # style is Value or Literal
-            if styles[md[TYPE]] == 'Literal'
-              delim_start = '<%= ' ; delim_end = ' %>'
-            else
-              delim_start = '<table:table-cell table:style-name="Default" office:value-type="string"><text:p><%= ERB::Util.h('
-              delim_end = ') %></text:p></table:table-cell>'
-            end
+             # if md[ROW_START] and md[ROW_END]
+             #        match_row=true
+             #      end
+
+          skip_row=false
+          #create cells, but dont append
+          cells= case styles[md[TYPE]]
+                 when "Code" then 
+                   skip_row=true
+                   "<% #{self.unnormalize md[ERB_CODE]} %>"
+                 when "Literal" then "<%= #{self.unnormalize md[ERB_CODE]} %>"
+                 when "Value" then  "<%=cell (#{self.unnormalize md[ERB_CODE] }) %>" #let helper build the correct "cell"
+                 end
+          
+          #fist see if we should open row tag
+		  #
+		  #N.B - this assumes that there should be NO CELL VALUS after this one on the same row (will create invalid document)... 
+          if md[ROW_START] and not skip_row
+            result+= md[ROW_START]
           end
           
-          if md[ROW_START] and not match_row
-            result += md[ROW_START]
-          end
+          #then cell body
+          result+=cells
 
-          result += "#{delim_start}#{self.unnormalize md[ERB_CODE]}#{delim_end}"
-          
-          if md[ROW_END] and not match_row
-          result += md[ROW_END]
+          #then close
+          if md[ROW_END] and not skip_row
+           result += md[ROW_END]
           end
           
           remaining = md.post_match
