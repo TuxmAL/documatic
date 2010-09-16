@@ -140,6 +140,11 @@ module Documatic::OpenDocumentText
     end
 
     def close
+      # To get rid of an annoying message about corrupted files in OOwriter 3.2.0
+      # we must remove the compiled content and styles before we close our ODT file.
+      self.jar.remove('documatic/master/styles.erb')
+      self.jar.remove('documatic/master/content.erb')
+      # Now we can safely close our document.
       self.jar.close
     end
     
