@@ -78,7 +78,7 @@ module Documatic::OpenDocumentSpreadsheet
 
     def close
       # To get rid of an annoying message about corrupted files in OOCalc 3.2.0
-      # we most remove the compiled content before we close our ODS file.
+      # we must remove the compiled content before we close our ODS file.
       self.jar.remove('documatic/master/content.erb')
       # Now we can safely close our document.
       self.jar.close
