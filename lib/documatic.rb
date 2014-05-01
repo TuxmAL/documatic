@@ -1,5 +1,3 @@
-require 'ruport'
-
 require 'documatic/component'
 require 'documatic/open_document_text/helper'
 require 'documatic/open_document_text/component'
@@ -8,7 +6,6 @@ require 'documatic/open_document_text/partial'
 require 'documatic/open_document_spreadsheet/helper'
 require 'documatic/open_document_spreadsheet/component'
 require 'documatic/open_document_spreadsheet/template'
-require 'documatic/formatter/open_document'
 
 # The module "Documatic" is the namespace for the other modules and
 # classes in this project.  It also contains some convenience methods.
