@@ -55,7 +55,7 @@ module Documatic::OpenDocumentText
 
     # Abbrevs
     DTC = Documatic::OpenDocumentText::Component
-    
+
     class << self
       # Process a template and save it to an output file.
       #
@@ -73,7 +73,7 @@ module Documatic::OpenDocumentText
       # can peform manipulation of the template directly by
       # e.g. accessing the template's JAR or the content or styles
       # components.  The template will be saved after the block exits.
-      def process_template(args, &block)
+      def process_template(args, &block)       
         if args[:options] && args[:options].template_file &&
             args[:options].output_file
           output_dir = File.dirname(args[:options].output_file)
@@ -155,6 +155,8 @@ module Documatic::OpenDocumentText
       
       @content_erb = self.erbify(@content_raw)
       @styles_erb = self.erbify(@styles_raw)
+@content_erb = self.erbify_rexml(@content_raw)
+@styles_erb = self.erbify_rexml(@styles_raw)
 
       # Create 'documatic/master/' in zip file
       self.jar.find_entry('documatic/master') || self.jar.mkdir('documatic/master')
@@ -207,7 +209,12 @@ module Documatic::OpenDocumentText
       xml_doc = REXML::Document.new(self.jar.read(filename))
       xml_text = String.new
 #      xml_doc.write(xml_text, Documatic.debug ? 0 : -1)
+xml_doc.write(xml_text, 2, true)
+puts '-x-x-x-x-x-x-x-x-x-x-{BEGIN}-x-x-x-x-x-x-x-x-x-x-'
+puts xml_text
+puts '=+=+=+=+=+=+=+=+=+=+=[ END ]=+=+=+=+=+=+=+=+=+=+='
       xml_doc.write(xml_text, 0)
+
       return xml_text
     end
     
@@ -238,6 +245,159 @@ module Documatic::OpenDocumentText
       end
       
       remaining = code
+      result = String.new
+      
+      # Then make a RE that includes the ERb-related styles.
+      # Match positions:
+      # 
+      #  1. ROW_START   Begin table row ?
+      #  2. ITEM_START  Begin list item ?
+      #  3. PARA_START  Begin paragraph ?
+      #  4. SPAN_END    Another text span ends immediately before ERb ?
+      #  --5. SPACE       (possible leading space)
+      #  5. TYPE        ERb text style type
+      #  6. ERB_CODE    ERb code
+      #  7.             (ERb inner brackets)
+      #  8. SPAN_START  Another text span begins immediately after ERb ?
+      #  9. PARA_END    End paragraph ?
+      # 10. ITEM_END    End list item ?
+      # 11. ROW_END     End table row (incl. covered rows) ?
+      #
+      # "?": optional, might not occur every time
+#      re_erb = /(<table:table-row[^>]*>\s*<table:table-cell [^>]+>\s*)?(\s*<text:list-item>\s*)?\s*(<text:p [^>]+>\s*)?(<\/text:span>)?<text:span text:style-name="(#{styles.keys.join '|'})">(([^<]*|<text:line-break\/>|<text:tab\/>)+)<\/text:span>(<text:span [^>]+>)?(\s*<\/text:p>\s*)?(<\/text:list-item>\s*)?(<\/table:table-cell>\s*(<table:covered-table-cell\/>\s*)*<\/table:table-row>)?/
+      re_erb = /(<table:table-row[^>]*>\s*<table:table-cell [^>]+>\s*)?(<text:list-item>\s*)?(<text:p [^>]+>\s*)?(<\/text:span>\s*)?<text:span text:style-name="(#{styles.keys.join '|'})">(([^<]*|<text:line-break\/>|<text:tab\/>)+)<\/text:span>(<text:span [^>]+>)?(\s*<\/text:p>)?(\s*<\/text:list-item>)?(\s*<\/table:table-cell>(\s*<table:covered-table-cell\/>)*\s*<\/table:table-row>)?/
+puts '-x-x-x-x-x-x-x-x-x-x-{BEGIN re_erb}-x-x-x-x-x-x-x-x-x-x-'
+puts re_erb
+puts '=+=+=+=+=+=+=+=+=+=+=[ END re_erb]=+=+=+=+=+=+=+=+=+=+='
+      # Then search for all text using those styles
+      while remaining.length > 0
+
+        md = re_erb.match remaining
+        
+        if md
+          result += md.pre_match
+          
+          match_code = false
+          match_row  = false
+          match_item = false
+          match_para = false
+          match_span = false
+
+          if styles[md[TYPE]] == 'Code'
+            match_code = true
+            delim_start = '<% ' ; delim_end = ' %>'
+            if md[PARA_START] and md[PARA_END]
+              match_para = true
+              if md[ITEM_START] and md[ITEM_END]
+                match_item = true
+              end
+              if md[ROW_START] and md[ROW_END]
+                match_row = true
+              end
+            end
+          elsif styles[md[TYPE]] == 'Block'
+            delim_start = '<%= ' ; delim_end = ' %>'
+            if md[PARA_START] and md[PARA_END]
+              match_para = true
+            end
+          else  # style is Value or Literal
+            if styles[md[TYPE]] == 'Literal'
+              delim_start = '<%= ' ; delim_end = ' %>'
+            else
+              delim_start = '<%= ERB::Util.h(' ; delim_end = ') %>'
+            end
+            
+            if md[SPAN_END] and md[SPAN_START]
+              match_span = true
+            end
+          end
+          
+          if md[ROW_START] and not match_row
+            result += md[ROW_START]
+          end
+
+          if md[ITEM_START] and not match_item
+            result += md[ITEM_START]
+          end
+          
+          if md[PARA_START] and not match_para
+            result += md[PARA_START]
+          end
+          
+          # Text formatting before ERb
+          if match_code
+            if md[SPAN_END]
+              result += md[SPAN_END]
+            end
+          else
+            #if md[SPACE]
+            #  result += md[SPACE]
+            #end
+            if md[SPAN_START] and not md[SPAN_END]
+              result += md[SPAN_START]
+            end
+          end
+          
+          result += "#{delim_start}#{self.unnormalize md[ERB_CODE]}#{delim_end}"
+          
+          # Text formatting after ERb
+          if match_code
+            if md[SPAN_START]
+              result += md[SPAN_START]
+            end
+          else
+            if md[SPAN_END]
+              result += md[SPAN_END]
+              if md[SPAN_START]
+                result += md[SPAN_START]
+              end
+            end
+          end
+
+          if md[PARA_END] and not match_para
+            result += md[PARA_END]
+          end
+
+          if md[ITEM_END] and not match_item
+            result += md[ITEM_END]
+          end
+          
+          if md[ROW_END] and not match_row
+          result += md[ROW_END]
+          end
+          
+          remaining = md.post_match
+          
+        else  # no further matches
+          result += remaining
+          remaining = ""
+        end
+      end
+      return result
+    end
+    
+    # Massage OpenDocument XML into ERb using REXML. (This is the heart of the compiler.)
+    def erbify_rexml(code)
+      # First gather all the ERb-related derived styles
+      remaining = code
+      styles = {'Ruby_20_Code' => 'Code', 'Ruby_20_Value' => 'Value',
+        'Ruby_20_Block' => 'Block', 'Ruby_20_Literal' => 'Literal'}
+      re_styles = /<style:style style:name="([^"]+)"[^>]* style:parent-style-name="Ruby_20_(Code|Value|Block|Literal)"[^>]*>/
+
+      while remaining.length > 0
+        md = re_styles.match remaining
+        if md
+          styles[md[STYLE_NAME]] = md[STYLE_TYPE]
+          remaining = md.post_match
+        else
+          remaining = ""
+        end
+      end
+      
+      remaining = code
+puts '-x-x-x-x-x-x-x-x-x-x-{BEGIN remaining}-x-x-x-x-x-x-x-x-x-x-'
+puts remaining
+puts '=+=+=+=+=+=+=+=+=+=+=[ END remaining]=+=+=+=+=+=+=+=+=+=+='
       result = String.new
       
       # Then make a RE that includes the ERb-related styles.
@@ -364,7 +524,9 @@ module Documatic::OpenDocumentText
           remaining = ""
         end
       end
-      
+puts '-x-x-x-x-x-x-x-x-x-x-{BEGIN result}-x-x-x-x-x-x-x-x-x-x-'
+puts result
+puts '=+=+=+=+=+=+=+=+=+=+=[ END result ]=+=+=+=+=+=+=+=+=+=+='
       return result
     end
 
