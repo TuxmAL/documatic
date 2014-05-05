@@ -1,15 +1,10 @@
-# DOCUMATIC TUTORIAL
-#   -- by Dave Nelson <urbanus@240gl.org>
+# DOCUMATIC Test
 
-# This tutorial is a trivial demonstration of how Documatic works.  By
-# all means play with this file: fiddle with the data, see what
-# happens.
+# I want to test my files, not the installed gem, if any!
+$LOAD_PATH.unshift File.expand_path(File.dirname(__FILE__ + '/../../lib/documatic'))
 
-# We start by requiring the 'documatic' rubygem, which also loads
-# Ruport.
-
-require '../lib/documatic'
-
+require 'documatic'
+puts "$LOAD_PATH=#{$LOAD_PATH}."
 Options = Struct.new(:template_file, :output_file)
 opts = Options.new
 opts.template_file = 'template.odt'
