@@ -103,7 +103,8 @@ module Documatic::OpenDocumentText
     
     def process(local_assigns = {})
       # Compile this template, if not compiled already.
-      self.jar.find_entry('documatic/master') || self.compile
+#      self.jar.find_entry('documatic/master') || self.compile
+      self.jar.find_entry('documatic/master') || self.compile_rexml
       # Process the styles (incl. headers and footers).
       # This is conditional because partials don't need styles.erb.
       @styles = DTC.new(self.jar.read('documatic/master/styles.erb') )
@@ -155,9 +156,6 @@ module Documatic::OpenDocumentText
       
       @content_erb = self.erbify(@content_raw)
       @styles_erb = self.erbify(@styles_raw)
-# we read  xml stream with REXML and we use it to find nodes on which to act upon.
-@content_erb = self.erbify_rexml('content.xml')
-@styles_erb = self.erbify_rexml('styles.xml')
 
       # Create 'documatic/master/' in zip file
       self.jar.find_entry('documatic/master') || self.jar.mkdir('documatic/master')
@@ -170,6 +168,7 @@ module Documatic::OpenDocumentText
       end
     end
 
+# we read  xml stream with REXML and we use it to find nodes on which to act upon.
     def compile_rexml
       # we read  xml stream with REXML and we use it to find nodes on which to act upon.
       @content_erb = self.erbify_rexml('content.xml')
@@ -226,8 +225,8 @@ module Documatic::OpenDocumentText
       xml_doc = REXML::Document.new(self.jar.read(filename))
       xml_text = String.new
 #      xml_doc.write(xml_text, Documatic.debug ? 0 : -1)
-xml_doc.write(xml_text, 2, true)
 puts '-x-x-x-x-x-x-x-x-x-x-{BEGIN xml_text}-x-x-x-x-x-x-x-x-x-x-'
+xml_doc.write(xml_text, 2, true)
 puts xml_text
 puts '=+=+=+=+=+=+=+=+=+=+=[ END xml_text ]=+=+=+=+=+=+=+=+=+=+='
       xml_doc.write(xml_text, 0)
@@ -399,57 +398,64 @@ puts '=+=+=+=+=+=+=+=+=+=+=[ END re_erb]=+=+=+=+=+=+=+=+=+=+='
       return result
     end
     
+    # Change OpenDocument line breaks, tabs and spaces in the ERb code to regular characters.
+    def unnormalize_rexml(element)
+      case element.name 
+      when 'line-break'
+        text = "\n"
+      when 'tab'
+        text = "\t"
+      when 's'
+        text = ' '
+      else 
+      #do nothing for now, but collecting all texts values 
+      text = element.texts.inject('') {|txt, t| txt << t.text}
+      # TODO: remove any element and surrounding this text with it if the case (i.e. span).
+      end
+      return REXML::Text.unnormalize(text)
+    end
+    
     # Massage OpenDocument XML into ERb using REXML. (This is the heart of the compiler.)
     def erbify_rexml(filename)
       styles = {'Ruby_20_Code' => '<%', 'Ruby_20_Value' => '<%= ERB::Util.h(',
         'Ruby_20_Block' => '<%=', 'Ruby_20_Literal' => '<%='}
 
       xml_doc = REXML::Document.new(self.jar.read(filename))
-      each styles.each_pair do |key, val|
-        XPath.each(xml_doc, '/*[@ text:style-name=$ruby_styles]', {},{'ruby_styles' => key}) do |el|
+      styles.each_pair do |key, val|
+        xpath="//*[@text:style-name=\"#{key}\"]"
+        #xpath="*"
+        puts "key: #{key}, val: #{val}, xpath: #{xpath}"
+        REXML::XPath.each(xml_doc, xpath) do |el|          
           text = ''
+      puts "el->#{el.inspect}"
+      el.attributes.each {|attr| puts attr.to_s}
+      el.texts.each {|txt| puts txt.to_s}
           unless el.has_elements?
-            text = el.texts
+            w el.texts.inject('') {|txt, t| txt << t.text}
+            text = REXML::Text.unnormalize(w)
           else
+            # Change OpenDocument line breaks, tabs and spaces in the ERb code to regular characters.
+            # as done by unnormalize earlier 
             el.elements.each do |el|
               case el.node_type
               when :text
-                text << el.text
+                text << REXML::Text.unnormalize(el.text)
               when :element
-                case el.name 
-                when 'line-break'
-                  text << "\n"
-                when 'tab'
-                  text << "\t"
-                when 's'
-                  text << ' '
-              # default do nothing for now
-              # TODO: remove any element and surrounding this text with it if the case (i.e. span).
-                end
+                text << unnormalize_rexml(el)
               end
             end
           end
-          erb_text = Element.new 'text:span'
-          erb_text.text = "#{val} #{text} #{')' if val.include? '('}%>"
-          el.replace_with(erb_text) 
+          #erb_text = REXML::Element.new 'text:span'
+          #erb_text.text = "#{val} #{text} #{')' if val.include? '('}%>"
+          #el.replace_with(erb_text) 
         end
       end
-      
-      XPath.each(xml_doc, '/*[@ text:style-name="Ruby_20_Value"]') do |el|
-        unless el.has_elements?
-          el.text= "<%= ERB::Util.h(#{el.text}) %>"
-        end
-      end
-      XPath.each(xml_doc, '/*[@ text:style-name="Ruby_20_Block"]') do |el|
-        unless el.has_elements?
-          el.text= "<%= #{el.text} %>"
-        end
-      end
-      XPath.each(xml_doc, '/*[@ text:style-name="Ruby_20_Literal"]') do |el|
-        unless el.has_elements?
-          el.text= "<%= #{el.text} %>"
-        end
-      end
+puts '|*|*|*|*|*|*|*|*|*|*|{BEGIN rexml_text}|*|*|*|*|*|*|*|*|*|*|'
+rexml_text=''
+xml_doc.write(rexml_text, 2, true)
+puts rexml_text
+puts '_@_@_@_@_@_@_@_@_@_@_[ END rexml_text ]_@_@_@_@_@_@_@_@_@_@_'
+
     end
 
   end
