@@ -250,9 +250,6 @@ puts '=+=+=+=+=+=+=+=+=+=+=[ END xml_text ]=+=+=+=+=+=+=+=+=+=+='
         'Ruby_20_Block' => 'Block', 'Ruby_20_Literal' => 'Literal'}
       re_styles = /<style:style style:name="([^"]+)"[^>]* style:parent-style-name="Ruby_20_(Code|Value|Block|Literal)"[^>]*>/
 
-puts '-x-x-x-x-x-x-x-x-x-x-{BEGIN styles}-x-x-x-x-x-x-x-x-x-x-'
-puts styles.inspect
-puts '=+=+=+=+=+=+=+=+=+=+=[ END styles ]=+=+=+=+=+=+=+=+=+=+='
       while remaining.length > 0
         md = re_styles.match remaining
         if md
@@ -263,9 +260,6 @@ puts '=+=+=+=+=+=+=+=+=+=+=[ END styles ]=+=+=+=+=+=+=+=+=+=+='
         end
       end
       
-puts '-x-x-x-x-x-x-x-x-x-x-{BEGIN styles post}-x-x-x-x-x-x-x-x-x-x-'
-puts styles.inspect
-puts '=+=+=+=+=+=+=+=+=+=+=[ END styles post ]=+=+=+=+=+=+=+=+=+=+='
       remaining = code
       result = String.new
       
@@ -288,9 +282,6 @@ puts '=+=+=+=+=+=+=+=+=+=+=[ END styles post ]=+=+=+=+=+=+=+=+=+=+='
       # "?": optional, might not occur every time
 #      re_erb = /(<table:table-row[^>]*>\s*<table:table-cell [^>]+>\s*)?(\s*<text:list-item>\s*)?\s*(<text:p [^>]+>\s*)?(<\/text:span>)?<text:span text:style-name="(#{styles.keys.join '|'})">(([^<]*|<text:line-break\/>|<text:tab\/>)+)<\/text:span>(<text:span [^>]+>)?(\s*<\/text:p>\s*)?(<\/text:list-item>\s*)?(<\/table:table-cell>\s*(<table:covered-table-cell\/>\s*)*<\/table:table-row>)?/
       re_erb = /(<table:table-row[^>]*>\s*<table:table-cell [^>]+>\s*)?(<text:list-item>\s*)?(<text:p [^>]+>\s*)?(<\/text:span>\s*)?<text:span text:style-name="(#{styles.keys.join '|'})">(([^<]*|<text:line-break\/>|<text:tab\/>)+)<\/text:span>(<text:span [^>]+>)?(\s*<\/text:p>)?(\s*<\/text:list-item>)?(\s*<\/table:table-cell>(\s*<table:covered-table-cell\/>)*\s*<\/table:table-row>)?/
-puts '-x-x-x-x-x-x-x-x-x-x-{BEGIN re_erb}-x-x-x-x-x-x-x-x-x-x-'
-puts re_erb
-puts '=+=+=+=+=+=+=+=+=+=+=[ END re_erb]=+=+=+=+=+=+=+=+=+=+='
       # Then search for all text using those styles
       while remaining.length > 0
 
@@ -409,7 +400,7 @@ puts '=+=+=+=+=+=+=+=+=+=+=[ END re_erb]=+=+=+=+=+=+=+=+=+=+='
         text = ' '
       else 
       #do nothing for now, but collecting all texts values 
-      text = element.texts.inject('') {|txt, t| txt << t.text}
+      text = element.texts.inject('') {|txt, t| txt << t.value}
       # TODO: remove any element and surrounding this text with it if the case (i.e. span).
       end
       return REXML::Text.unnormalize(text)
@@ -427,11 +418,8 @@ puts '=+=+=+=+=+=+=+=+=+=+=[ END re_erb]=+=+=+=+=+=+=+=+=+=+='
         puts "key: #{key}, val: #{val}, xpath: #{xpath}"
         REXML::XPath.each(xml_doc, xpath) do |el|          
           text = ''
-      puts "el->#{el.inspect}"
-      el.attributes.each {|attr| puts attr.to_s}
-      el.texts.each {|txt| puts txt.to_s}
           unless el.has_elements?
-            w el.texts.inject('') {|txt, t| txt << t.text}
+            w = el.texts.inject('') {|txt, t| txt << t.value}
             text = REXML::Text.unnormalize(w)
           else
             # Change OpenDocument line breaks, tabs and spaces in the ERb code to regular characters.
@@ -439,15 +427,14 @@ puts '=+=+=+=+=+=+=+=+=+=+=[ END re_erb]=+=+=+=+=+=+=+=+=+=+='
             el.elements.each do |el|
               case el.node_type
               when :text
-                text << REXML::Text.unnormalize(el.text)
+                text << REXML::Text.unnormalize(el.value)
               when :element
                 text << unnormalize_rexml(el)
               end
             end
           end
-          #erb_text = REXML::Element.new 'text:span'
-          #erb_text.text = "#{val} #{text} #{')' if val.include? '('}%>"
-          #el.replace_with(erb_text) 
+          erb_text = "#{val} #{text} #{')' if val.include? '('}%>"
+          el.replace_with(REXML::Text.new(erb_text))
         end
       end
 puts '|*|*|*|*|*|*|*|*|*|*|{BEGIN rexml_text}|*|*|*|*|*|*|*|*|*|*|'
