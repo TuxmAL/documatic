@@ -408,8 +408,8 @@ puts '=+=+=+=+=+=+=+=+=+=+=[ END xml_text ]=+=+=+=+=+=+=+=+=+=+='
     
     # Massage OpenDocument XML into ERb using REXML. (This is the heart of the compiler.)
     def erbify_rexml(filename)
-      styles = {'Ruby_20_Code' => '<%', 'Ruby_20_Value' => '<%= ERB::Util.h(',
-        'Ruby_20_Block' => '<%=', 'Ruby_20_Literal' => '<%='}
+      styles = {'Ruby_20_Code' => '', 'Ruby_20_Value' => '= ERB::Util.h(',
+        'Ruby_20_Block' => '=', 'Ruby_20_Literal' => '='}
 
       xml_doc = REXML::Document.new(self.jar.read(filename))
       styles.each_pair do |key, val|
@@ -433,16 +433,25 @@ puts '=+=+=+=+=+=+=+=+=+=+=[ END xml_text ]=+=+=+=+=+=+=+=+=+=+='
               end
             end
           end
-          erb_text = "#{val} #{text} #{')' if val.include? '('}%>"
+          # we use a non existant entity &perc; to ease the substitution after 
+          # parsing the whole document with REXML.
+          erb_text = "<&perc;#{val}#{text}#{')' if val.include? '('}&perc;>"
           el.replace_with(REXML::Text.new(erb_text))
         end
       end
+      rexml_text=''
+      xml_doc.write(rexml_text, -1, true)
+      # TODO: need to remove <text:span> </span> arounf <% and %> too! 
+      rexml_text.gsub!('&lt;&amp;perc;', '<%')
+      rexml_text.gsub!('&amp;perc;&gt;', '%>')
 puts '|*|*|*|*|*|*|*|*|*|*|{BEGIN rexml_text}|*|*|*|*|*|*|*|*|*|*|'
-rexml_text=''
 xml_doc.write(rexml_text, 2, true)
+rexml_text = 
+rexml_text.gsub!('&lt;&amp;perc;', '<%')
+rexml_text.gsub!('&amp;perc;&gt;', '%>')
 puts rexml_text
 puts '_@_@_@_@_@_@_@_@_@_@_[ END rexml_text ]_@_@_@_@_@_@_@_@_@_@_'
-
+      return rexml_text
     end
 
   end
