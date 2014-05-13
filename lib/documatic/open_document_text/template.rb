@@ -27,32 +27,6 @@ module Documatic::OpenDocumentText
     # Compiled text, to be written to 'styles.erb'
     attr_accessor :styles_erb
 
-    # RE_STYLES match positions
-    STYLE_NAME = 1
-    STYLE_TYPE = 2
-    
-    # RE_ERB match positions
-    TYPE       =  5
-    ERB_CODE   =  6
-    
-    ROW_START  =  1
-    ROW_END    = 11
-
-    ITEM_START =  2
-    ITEM_END   = 10
-    
-    PARA_START =  3
-    PARA_END   =  9
-    
-    SPAN_END   =  4
-    SPAN_START =  8
-    
-    # Match types:
-    TABLE_ROW = 1
-    PARAGRAPH = 2
-    INLINE_CODE = 3
-    VALUE = 4
-
     # Abbrevs
     DTC = Documatic::OpenDocumentText::Component
 
@@ -103,8 +77,7 @@ module Documatic::OpenDocumentText
     
     def process(local_assigns = {})
       # Compile this template, if not compiled already.
-#      self.jar.find_entry('documatic/master') || self.compile
-      self.jar.find_entry('documatic/master') || self.compile_rexml
+      self.jar.find_entry('documatic/master') || self.compile
       # Process the styles (incl. headers and footers).
       # This is conditional because partials don't need styles.erb.
       @styles = DTC.new(self.jar.read('documatic/master/styles.erb') )
@@ -148,31 +121,11 @@ module Documatic::OpenDocumentText
       # Now we can safely close our document.
       self.jar.close
     end
-    
+
+    # Read the xml stream with REXML and use it to find nodes on which to act upon.
     def compile
-      # Read the raw files
-      @content_raw = pretty_xml('content.xml')
-      @styles_raw = pretty_xml('styles.xml')
-      
-      @content_erb = self.erbify(@content_raw)
-      @styles_erb = self.erbify(@styles_raw)
-
-      # Create 'documatic/master/' in zip file
-      self.jar.find_entry('documatic/master') || self.jar.mkdir('documatic/master')
-      
-      self.jar.get_output_stream('documatic/master/content.erb') do |f|
-        f.write @content_erb
-      end
-      self.jar.get_output_stream('documatic/master/styles.erb') do |f|
-        f.write @styles_erb
-      end
-    end
-
-# we read  xml stream with REXML and we use it to find nodes on which to act upon.
-    def compile_rexml
-      # we read  xml stream with REXML and we use it to find nodes on which to act upon.
-      @content_erb = self.erbify_rexml('content.xml')
-      @styles_erb = self.erbify_rexml('styles.xml')
+      @content_erb = self.erbify('content.xml')
+      @styles_erb = self.erbify('styles.xml')
 
       # Create 'documatic/master/' in zip file
       self.jar.find_entry('documatic/master') || self.jar.mkdir('documatic/master')
@@ -224,173 +177,14 @@ module Documatic::OpenDocumentText
       # Pretty print the XML source
       xml_doc = REXML::Document.new(self.jar.read(filename))
       xml_text = String.new
-#      xml_doc.write(xml_text, Documatic.debug ? 0 : -1)
-puts '-x-x-x-x-x-x-x-x-x-x-{BEGIN xml_text}-x-x-x-x-x-x-x-x-x-x-'
-xml_doc.write(xml_text, 2, true)
-puts xml_text
-puts '=+=+=+=+=+=+=+=+=+=+=[ END xml_text ]=+=+=+=+=+=+=+=+=+=+='
       xml_doc.write(xml_text, 0)
 
       return xml_text
     end
     
-    # Change OpenDocument line breaks and tabs in the ERb code to regular characters.
-    def unnormalize(code)
-      code = code.gsub(/<text:line-break\/>/, "\n")
-      code = code.gsub(/<text:tab\/>/, "\t")
-      code = code.gsub(/<text:s(\/|(\s[^>]*))>/, " ")
-      return REXML::Text.unnormalize(code)
-    end
-
-    # Massage OpenDocument XML into ERb.  (This is the heart of the compiler.)
-    def erbify(code)
-      # First gather all the ERb-related derived styles
-      remaining = code
-      styles = {'Ruby_20_Code' => 'Code', 'Ruby_20_Value' => 'Value',
-        'Ruby_20_Block' => 'Block', 'Ruby_20_Literal' => 'Literal'}
-      re_styles = /<style:style style:name="([^"]+)"[^>]* style:parent-style-name="Ruby_20_(Code|Value|Block|Literal)"[^>]*>/
-
-      while remaining.length > 0
-        md = re_styles.match remaining
-        if md
-          styles[md[STYLE_NAME]] = md[STYLE_TYPE]
-          remaining = md.post_match
-        else
-          remaining = ""
-        end
-      end
-      
-      remaining = code
-      result = String.new
-      
-      # Then make a RE that includes the ERb-related styles.
-      # Match positions:
-      # 
-      #  1. ROW_START   Begin table row ?
-      #  2. ITEM_START  Begin list item ?
-      #  3. PARA_START  Begin paragraph ?
-      #  4. SPAN_END    Another text span ends immediately before ERb ?
-      #  --5. SPACE       (possible leading space)
-      #  5. TYPE        ERb text style type
-      #  6. ERB_CODE    ERb code
-      #  7.             (ERb inner brackets)
-      #  8. SPAN_START  Another text span begins immediately after ERb ?
-      #  9. PARA_END    End paragraph ?
-      # 10. ITEM_END    End list item ?
-      # 11. ROW_END     End table row (incl. covered rows) ?
-      #
-      # "?": optional, might not occur every time
-#      re_erb = /(<table:table-row[^>]*>\s*<table:table-cell [^>]+>\s*)?(\s*<text:list-item>\s*)?\s*(<text:p [^>]+>\s*)?(<\/text:span>)?<text:span text:style-name="(#{styles.keys.join '|'})">(([^<]*|<text:line-break\/>|<text:tab\/>)+)<\/text:span>(<text:span [^>]+>)?(\s*<\/text:p>\s*)?(<\/text:list-item>\s*)?(<\/table:table-cell>\s*(<table:covered-table-cell\/>\s*)*<\/table:table-row>)?/
-      re_erb = /(<table:table-row[^>]*>\s*<table:table-cell [^>]+>\s*)?(<text:list-item>\s*)?(<text:p [^>]+>\s*)?(<\/text:span>\s*)?<text:span text:style-name="(#{styles.keys.join '|'})">(([^<]*|<text:line-break\/>|<text:tab\/>)+)<\/text:span>(<text:span [^>]+>)?(\s*<\/text:p>)?(\s*<\/text:list-item>)?(\s*<\/table:table-cell>(\s*<table:covered-table-cell\/>)*\s*<\/table:table-row>)?/
-      # Then search for all text using those styles
-      while remaining.length > 0
-
-        md = re_erb.match remaining
-        
-        if md
-          result += md.pre_match
-          
-          match_code = false
-          match_row  = false
-          match_item = false
-          match_para = false
-          match_span = false
-
-          if styles[md[TYPE]] == 'Code'
-            match_code = true
-            delim_start = '<% ' ; delim_end = ' %>'
-            if md[PARA_START] and md[PARA_END]
-              match_para = true
-              if md[ITEM_START] and md[ITEM_END]
-                match_item = true
-              end
-              if md[ROW_START] and md[ROW_END]
-                match_row = true
-              end
-            end
-          elsif styles[md[TYPE]] == 'Block'
-            delim_start = '<%= ' ; delim_end = ' %>'
-            if md[PARA_START] and md[PARA_END]
-              match_para = true
-            end
-          else  # style is Value or Literal
-            if styles[md[TYPE]] == 'Literal'
-              delim_start = '<%= ' ; delim_end = ' %>'
-            else
-              delim_start = '<%= ERB::Util.h(' ; delim_end = ') %>'
-            end
-            
-            if md[SPAN_END] and md[SPAN_START]
-              match_span = true
-            end
-          end
-          
-          if md[ROW_START] and not match_row
-            result += md[ROW_START]
-          end
-
-          if md[ITEM_START] and not match_item
-            result += md[ITEM_START]
-          end
-          
-          if md[PARA_START] and not match_para
-            result += md[PARA_START]
-          end
-          
-          # Text formatting before ERb
-          if match_code
-            if md[SPAN_END]
-              result += md[SPAN_END]
-            end
-          else
-            #if md[SPACE]
-            #  result += md[SPACE]
-            #end
-            if md[SPAN_START] and not md[SPAN_END]
-              result += md[SPAN_START]
-            end
-          end
-          
-          result += "#{delim_start}#{self.unnormalize md[ERB_CODE]}#{delim_end}"
-          
-          # Text formatting after ERb
-          if match_code
-            if md[SPAN_START]
-              result += md[SPAN_START]
-            end
-          else
-            if md[SPAN_END]
-              result += md[SPAN_END]
-              if md[SPAN_START]
-                result += md[SPAN_START]
-              end
-            end
-          end
-
-          if md[PARA_END] and not match_para
-            result += md[PARA_END]
-          end
-
-          if md[ITEM_END] and not match_item
-            result += md[ITEM_END]
-          end
-          
-          if md[ROW_END] and not match_row
-          result += md[ROW_END]
-          end
-          
-          remaining = md.post_match
-          
-        else  # no further matches
-          result += remaining
-          remaining = ""
-        end
-      end
-      return result
-    end
-    
-    # Change OpenDocument line breaks, tabs and spaces in the ERb code to regular characters.
-    def unnormalize_rexml(element)
+    # Change OpenDocument line breaks, tabs and spaces 
+    # in the ERb code to regular characters.
+    def unnormalize(element)
       case element.name 
       when 'line-break'
         text = "\n"
@@ -398,24 +192,38 @@ puts '=+=+=+=+=+=+=+=+=+=+=[ END xml_text ]=+=+=+=+=+=+=+=+=+=+='
         text = "\t"
       when 's'
         text = ' '
-      else 
-      #do nothing for now, but collecting all texts values 
+      else
+      # do nothing for now, but collecting all texts values 
+      # removing any surrounding element if the case (i.e. span).
       text = element.texts.inject('') {|txt, t| txt << t.value}
-      # TODO: remove any element and surrounding this text with it if the case (i.e. span).
       end
       return REXML::Text.unnormalize(text)
     end
-    
-    # Massage OpenDocument XML into ERb using REXML. (This is the heart of the compiler.)
-    def erbify_rexml(filename)
+
+    # Massage OpenDocument XML into ERb (this is the heart of the compiler), 
+    # not using RegExp but REXML itself to find ERb-related nodes.
+    # At this time the only nodes gathered are those with character style named
+    # 'Ruby Code', 'Ruby Value', 'Ruby Block' and 'Ruby Literal'.
+    # o 'Ruby Code': simply evaluate your code without returning anything;
+    #                useful to set up your variables or define your helper 
+    #                functions into the document context.
+    # o 'Ruby Value': evaluate your code returning the result as text; this text
+    #                 *is* escaped using ERB::Util.h to avoid any clash with XML 
+    #                 tags into ODT document.
+    # o 'Ruby Value',
+    # o 'Ruby Block': evaluate your code returning the result as text; this text
+    #                 *is* *not* escaped to allow tag creation into ODT document.
+    def erbify(filename)     
+     # First gather all the ERb-related derived styles
+     # styles = {'Ruby_20_Code' => 'Code', 'Ruby_20_Value' => 'Value',
+     #   'Ruby_20_Block' => 'Block', 'Ruby_20_Literal' => 'Literal'}
+     # re_styles = /<style:style style:name="([^"]+)"[^>]* style:parent-style-name="Ruby_20_(Code|Value|Block|Literal)"[^>]*>/
       styles = {'Ruby_20_Code' => '', 'Ruby_20_Value' => '= ERB::Util.h(',
         'Ruby_20_Block' => '=', 'Ruby_20_Literal' => '='}
 
       xml_doc = REXML::Document.new(self.jar.read(filename))
       styles.each_pair do |key, val|
         xpath="//*[@text:style-name=\"#{key}\"]"
-        #xpath="*"
-        puts "key: #{key}, val: #{val}, xpath: #{xpath}"
         REXML::XPath.each(xml_doc, xpath) do |el|          
           text = ''
           unless el.has_elements?
@@ -429,7 +237,7 @@ puts '=+=+=+=+=+=+=+=+=+=+=[ END xml_text ]=+=+=+=+=+=+=+=+=+=+='
               when :text
                 text << REXML::Text.unnormalize(el.value)
               when :element
-                text << unnormalize_rexml(el)
+                text << unnormalize(el)
               end
             end
           end
@@ -440,17 +248,9 @@ puts '=+=+=+=+=+=+=+=+=+=+=[ END xml_text ]=+=+=+=+=+=+=+=+=+=+='
         end
       end
       rexml_text=''
-      xml_doc.write(rexml_text, -1, true)
-      # TODO: need to remove <text:span> </span> arounf <% and %> too! 
+      xml_doc.write(rexml_text, 2, true)
       rexml_text.gsub!('&lt;&amp;perc;', '<%')
       rexml_text.gsub!('&amp;perc;&gt;', '%>')
-puts '|*|*|*|*|*|*|*|*|*|*|{BEGIN rexml_text}|*|*|*|*|*|*|*|*|*|*|'
-xml_doc.write(rexml_text, 2, true)
-rexml_text = 
-rexml_text.gsub!('&lt;&amp;perc;', '<%')
-rexml_text.gsub!('&amp;perc;&gt;', '%>')
-puts rexml_text
-puts '_@_@_@_@_@_@_@_@_@_@_[ END rexml_text ]_@_@_@_@_@_@_@_@_@_@_'
       return rexml_text
     end
 
