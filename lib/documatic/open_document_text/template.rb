@@ -193,14 +193,14 @@ module Documatic::OpenDocumentText
       when 's'
         text = ' '
       else
-      # do nothing for now, but collecting all texts values 
-      # removing any surrounding element if the case (i.e. span).
-      text = element.texts.inject('') {|txt, t| txt << t.value}
+        # do nothing for now, but collecting all texts values
+        # removing any surrounding element if the case (i.e. span).
+        text = element.texts.inject('') {|txt, t| txt << t.value}
       end
       return REXML::Text.unnormalize(text)
     end
 
-    # Massage OpenDocument XML into ERb (this is the heart of the compiler), 
+    # Massage OpenDocument XML into ERb (this is the heart of the compiler),
     # not using RegExp but REXML itself to find ERb-related nodes.
     # At this time the only nodes gathered are those with character style named
     # 'Ruby Code', 'Ruby Value', 'Ruby Block' and 'Ruby Literal'.
@@ -224,8 +224,10 @@ module Documatic::OpenDocumentText
       xml_doc = REXML::Document.new(self.jar.read(filename))
       styles.each_pair do |key, val|
         xpath="//*[@text:style-name=\"#{key}\"]"
-        REXML::XPath.each(xml_doc, xpath) do |el|          
+        REXML::XPath.each(xml_doc, xpath) do |el|
           text = ''
+          el_style = []
+          el_class = []
           unless el.has_elements?
             w = el.texts.inject('') {|txt, t| txt << t.value}
             text = REXML::Text.unnormalize(w)
@@ -237,6 +239,8 @@ module Documatic::OpenDocumentText
               when :text
                 text << REXML::Text.unnormalize(el.value)
               when :element
+                el_style << el.attribute('style-name', 'text').value if el.attribute('style-name', 'text')
+                el_class << el.attribute('class-names', 'text').value if el.attribute('class-names', 'text')
                 text << unnormalize(el)
               end
             end
@@ -244,11 +248,20 @@ module Documatic::OpenDocumentText
           # we use a non existant entity &perc; to ease the substitution after 
           # parsing the whole document with REXML.
           erb_text = "<&perc;#{val}#{text}#{')' if val.include? '('}&perc;>"
-          el.replace_with(REXML::Text.new(erb_text))
+          new_el = REXML::Element.new('text:span')
+          #puts "el_style ->#{el_style}<-"
+          #puts "el_class ->#{el_class}<-"
+          #puts "(el_style + el_class) ->#{el_style + el_class}<-"
+          class_names = (el_style + el_class).join(' ')
+          #new_el.add_attribute('text:class-names', class_names) if class_names != ''
+          new_el.add_attribute('text:style-name', class_names) if class_names != ''
+          new_el.text=(erb_text)
+          el.replace_with(new_el)
+          #el.replace_with(REXML::Text.new(erb_text))
         end
       end
       rexml_text=''
-      xml_doc.write(rexml_text, 2, true)
+      xml_doc.write(rexml_text, -1, true)
       rexml_text.gsub!('&lt;&amp;perc;', '<%')
       rexml_text.gsub!('&amp;perc;&gt;', '%>')
       return rexml_text
