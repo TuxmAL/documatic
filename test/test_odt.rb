@@ -1,3 +1,5 @@
+# -*- encoding: utf-8 -*-
+
 # DOCUMATIC Test
 
 # I want to test my files, not the installed gem, if any!

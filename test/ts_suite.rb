@@ -1,5 +1,4 @@
-# To change this template, choose Tools | Templates
-# and open the template in the editor.
+# -*- encoding: utf-8 -*-
 
 require 'test/unit' 
 
