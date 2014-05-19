@@ -1,3 +1,5 @@
+# -*- encoding: utf-8 -*-
+
 require 'documatic/component'
 require 'documatic/open_document_text/helper'
 require 'documatic/open_document_text/component'
