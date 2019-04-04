@@ -206,8 +206,7 @@ module Documatic::OpenDocumentText
       # Pretty print the XML source
       xml_doc = REXML::Document.new(self.jar.read(filename))
       xml_text = String.new
-#      xml_doc.write(xml_text, Documatic.debug ? 0 : -1)
-      xml_doc.write(xml_text, 0)
+      xml_doc.write(xml_text, -1)
       return xml_text
     end
     
