@@ -28,7 +28,6 @@ spec = Gem::Specification.new do |s|
   s.bindir = "bin"
   s.platform  = Gem::Platform::RUBY
   s.autorequire = "documatic.rb"
-  s.add_dependency("ruport")
   s.add_dependency("rubyzip")
 end
 

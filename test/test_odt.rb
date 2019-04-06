@@ -5,9 +5,6 @@
 # all means play with this file: fiddle with the data, see what
 # happens.
 
-# We start by requiring the 'documatic' rubygem, which also loads
-# Ruport.
-
 require '../lib/documatic'
 
 Options = Struct.new(:template_file, :output_file)
