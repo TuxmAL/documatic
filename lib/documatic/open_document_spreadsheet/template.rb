@@ -1,7 +1,7 @@
 require 'rexml/document'
 require 'rexml/text'
 require 'rexml/attribute'
-require 'zip/zip'
+require 'zip'
 require 'erb'
 require 'fileutils'
 
@@ -56,7 +56,7 @@ module Documatic::OpenDocumentSpreadsheet
     
     def initialize(filename)
       @filename = filename
-      @jar = Zip::ZipFile.open(@filename)
+      @jar = Zip::File.open(@filename)
       return true
     end
     
