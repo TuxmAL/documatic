@@ -1,12 +1,12 @@
-require 'documatic/component'
-require 'documatic/version'
-require 'documatic/open_document_text/helper'
-require 'documatic/open_document_text/component'
-require 'documatic/open_document_text/template'
-require 'documatic/open_document_text/partial'
-require 'documatic/open_document_spreadsheet/helper'
-require 'documatic/open_document_spreadsheet/component'
-require 'documatic/open_document_spreadsheet/template'
+require_relative 'documatic/component'
+require_relative 'documatic/version'
+require_relative 'documatic/open_document_text/helper'
+require_relative 'documatic/open_document_text/component'
+require_relative 'documatic/open_document_text/template'
+require_relative 'documatic/open_document_text/partial'
+require_relative 'documatic/open_document_spreadsheet/helper'
+require_relative 'documatic/open_document_spreadsheet/component'
+require_relative 'documatic/open_document_spreadsheet/template'
 
 # The module "Documatic" is the namespace for the other modules and
 # classes in this project.  It also contains some convenience methods.
