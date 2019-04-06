@@ -1,4 +1,5 @@
 require 'documatic/component'
+require 'documatic/version'
 require 'documatic/open_document_text/helper'
 require 'documatic/open_document_text/component'
 require 'documatic/open_document_text/template'
