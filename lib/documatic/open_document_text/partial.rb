@@ -1,5 +1,3 @@
-# -*- encoding: utf-8 -*-
-
 require 'rexml/document'
 
 module Documatic::OpenDocumentText

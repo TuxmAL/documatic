@@ -1,5 +1,4 @@
 #from http://blog.101ideas.cz/post/353002256/the-truth-about-gemspecs
-# encoding: utf-8
 require "base64"
 
 require 'rubygems'
