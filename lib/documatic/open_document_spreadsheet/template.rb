@@ -1,3 +1,5 @@
+# -*- encoding: utf-8 -*-
+
 require 'rexml/document'
 require 'rexml/text'
 require 'rexml/attribute'
