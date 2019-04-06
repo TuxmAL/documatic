@@ -1,6 +1,6 @@
 # DOCUMATIC Test
 
-require '../lib/documatic'
+require File.join(File.dirname(__FILE__), '../lib/documatic')
 
 Options = Struct.new(:template_file, :output_file)
 opts = Options.new
