@@ -1,3 +1,6 @@
 *~
+*.bak
+*.old
+*.org
 pkg
-/nbproject/
+test/output
